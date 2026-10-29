@@ -1,0 +1,2518 @@
+import os
+import json
+
+def load_templates():
+    template_dir = os.path.join(os.path.dirname(__file__), 'pro-templates')
+    templates = {}
+    mapping = {
+        'nis2_24h': ('NIS2 24h Early Warning (Art. 23)', 'NIS2-Article23-24h-Early-Warning-Template.md'),
+        'nis2_72h': ('NIS2 72h Incident Notification (Art. 23)', 'NIS2-Article23-72h-Incident-Notification-Template.md'),
+        'nis2_1m': ('NIS2 1-Month Final RCA Report (Art. 23)', 'NIS2-Article23-Final-Report-1Month-Template.md'),
+        'cra_vuln': ('CRA 24h Active Exploit Notification (Art. 11)', 'CRA-Article11-Actively-Exploited-Vulnerability-CSIRT-Notification.md'),
+        'board_res': ('Board Cyber Oversight Resolution (Art. 20)', 'NIS2-Article20-Management-Board-Cybersecurity-Resolution.md'),
+        'vendor_25pt': ('25-Point Supply Chain Vendor Audit (Art. 21)', 'EU-SupplyChain-Vendor-Security-Questionnaire-25pt.md')
+    }
+    
+    for key, (title, filename) in mapping.items():
+        filepath = os.path.join(template_dir, filename)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                templates[key] = {
+                    'title': title,
+                    'filename': filename,
+                    'content': f.read()
+                }
+    return templates
+
+def generate_html():
+    templates = load_templates()
+    templates_json = json.dumps(templates)
+    
+    # We will assemble index.html
+    html_content = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EU Cyber Resilience Act (CRA) & NIS2 Self-Assessment Tool | 2026 Compliance Micro-SaaS</title>
+<meta name="description" content="Single-file interactive EU Cyber Resilience Act (CRA) & NIS2 Directive compliance auditor, SBOM policy builder, and incident response kit for European software vendors and SaaS founders.">
+<style>
+/* CSS VARIABLES & THEMING */
+:root {{
+  --bg: #090d16;
+  --surface: #111827;
+  --surface-hover: #1f2937;
+  --surface-card: #141d2e;
+  --border: #1f2d42;
+  --border-focus: #00f0ff;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --cyan: #00f0ff;
+  --cyan-dim: rgba(0, 240, 255, 0.12);
+  --eu-blue: #2563eb;
+  --eu-gold: #fbbf24;
+  --emerald: #10b981;
+  --emerald-dim: rgba(16, 185, 129, 0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245, 158, 11, 0.12);
+  --rose: #f43f5e;
+  --rose-dim: rgba(244, 63, 94, 0.15);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}}
+
+[data-theme="light"] {{
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --surface-card: #f8fafc;
+  --border: #e2e8f0;
+  --border-focus: #2563eb;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --cyan: #0284c7;
+  --cyan-dim: rgba(2, 132, 199, 0.1);
+  --eu-blue: #1d4ed8;
+  --eu-gold: #d97706;
+  --emerald: #059669;
+  --emerald-dim: rgba(5, 150, 105, 0.1);
+  --amber: #d97706;
+  --amber-dim: rgba(217, 119, 6, 0.1);
+  --rose: #e11d48;
+  --rose-dim: rgba(225, 29, 72, 0.1);
+  --shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+}}
+
+/* RESET & BASE */
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{
+  background-color: var(--bg);
+  color: var(--text-main);
+  font-family: var(--font);
+  line-height: 1.5;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}}
+
+a {{ color: var(--cyan); text-decoration: none; }}
+a:hover {{ text-decoration: underline; }}
+
+/* HEADER & TOP BAR */
+.eu-flag-banner {{
+  background: linear-gradient(90deg, #003399 0%, #1e40af 100%);
+  color: #fff;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+}}
+.eu-flag-banner span.tag {{
+  background: #fbbf24;
+  color: #000;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  margin-right: 8px;
+}}
+.top-nav {{
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}}
+.brand {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}}
+.brand-icon {{
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #003399 0%, #00f0ff 100%);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}}
+.brand-title {{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}}
+.brand-title .badge {{
+  font-size: 10px;
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}}
+.brand-sub {{
+  font-size: 12px;
+  color: var(--text-muted);
+}}
+.nav-actions {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}}
+
+/* BUTTONS */
+.btn {{
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: var(--transition);
+  font-family: inherit;
+}}
+.btn-primary {{
+  background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
+  color: #051423;
+  box-shadow: 0 2px 10px rgba(0, 240, 255, 0.25);
+}}
+.btn-primary:hover {{
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}}
+.btn-outline {{
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-main);
+}}
+.btn-outline:hover {{
+  background: var(--surface-hover);
+  border-color: var(--cyan);
+}}
+.btn-gold {{
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+}}
+.btn-gold:hover {{
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}}
+.btn-sm {{
+  padding: 5px 10px;
+  font-size: 12px;
+}}
+
+/* MAIN CONTAINER & TABS */
+.container {{
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+}}
+.tabs-nav {{
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}}
+.tab-btn {{
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  cursor: pointer;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: var(--transition);
+  font-family: inherit;
+}}
+.tab-btn:hover {{
+  color: var(--text-main);
+  background: var(--surface-hover);
+}}
+.tab-btn.active {{
+  color: var(--cyan);
+  background: var(--surface);
+}}
+.tab-btn.active::after {{
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}}
+.tab-badge {{
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+}}
+.tab-btn.active .tab-badge {{
+  background: var(--cyan-dim);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}}
+
+/* TAB CONTENT */
+.tab-pane {{
+  display: none;
+  animation: fadeIn 0.25s ease-in-out;
+}}
+.tab-pane.active {{
+  display: block;
+}}
+@keyframes fadeIn {{
+  from {{ opacity: 0; transform: translateY(4px); }}
+  to {{ opacity: 1; transform: translateY(0); }}
+}}
+
+/* GRID & CARDS */
+.grid-2 {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}}
+.grid-3 {{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}}
+.grid-4 {{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}}
+@media (max-width: 960px) {{
+  .grid-2, .grid-3, .grid-4 {{ grid-template-columns: 1fr; }}
+}}
+
+.card {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+}}
+.card-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}}
+.card-title {{
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}}
+.card-subtitle {{
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}}
+
+/* STAT CARDS */
+.stat-card {{
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}}
+.stat-label {{
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}}
+.stat-val {{
+  font-size: 26px;
+  font-weight: 800;
+  margin: 6px 0;
+  color: var(--text-main);
+}}
+.stat-desc {{
+  font-size: 12px;
+  color: var(--text-muted);
+}}
+
+/* FORM CONTROLS */
+.form-group {{
+  margin-bottom: 16px;
+}}
+label.form-label {{
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}}
+.form-control {{
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 14px;
+  font-family: inherit;
+  transition: var(--transition);
+}}
+.form-control:focus {{
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+}}
+select.form-control {{
+  cursor: pointer;
+}}
+textarea.form-control {{
+  min-height: 90px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}}
+
+/* CHECKLIST ITEMS */
+.check-group {{
+  margin-bottom: 24px;
+}}
+.group-title {{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid var(--cyan);
+}}
+.check-item {{
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: var(--transition);
+}}
+.check-item:hover {{
+  border-color: var(--border-focus);
+}}
+.check-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}}
+.check-id {{
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}}
+.check-title-text {{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}}
+.check-article {{
+  font-size: 11px;
+  color: var(--eu-gold);
+  font-weight: 600;
+}}
+.check-desc {{
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 8px 0 12px 0;
+  line-height: 1.4;
+}}
+.check-options {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}}
+.opt-btn {{
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}}
+.opt-btn:hover {{
+  background: var(--surface-hover);
+  color: var(--text-main);
+}}
+.opt-btn.active-compliant {{
+  background: var(--emerald-dim);
+  border-color: var(--emerald);
+  color: var(--emerald);
+}}
+.opt-btn.active-progress {{
+  background: var(--amber-dim);
+  border-color: var(--amber);
+  color: var(--amber);
+}}
+.opt-btn.active-noncompliant {{
+  background: var(--rose-dim);
+  border-color: var(--rose);
+  color: var(--rose);
+}}
+.opt-btn.active-na {{
+  background: var(--surface-hover);
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}}
+
+/* SCORE GAUGES & CHARTS */
+.gauge-container {{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}}
+.circle-chart {{
+  width: 140px;
+  height: 140px;
+}}
+.circle-bg {{
+  fill: none;
+  stroke: var(--surface-card);
+  stroke-width: 3.2;
+}}
+.circle-progress {{
+  fill: none;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s ease-in-out;
+}}
+.gauge-pct {{
+  font-size: 26px;
+  font-weight: 800;
+  fill: var(--text-main);
+  font-family: var(--font);
+}}
+.gauge-label {{
+  font-size: 11px;
+  fill: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}}
+
+/* PROGRESS BARS */
+.bar-track {{
+  width: 100%;
+  height: 8px;
+  background: var(--surface-card);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 6px 0 10px 0;
+}}
+.bar-fill {{
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}}
+
+/* CODE & PREVIEW BOXES */
+.code-box {{
+  background: #060911;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #38bdf8;
+  max-height: 380px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+}}
+.copy-btn {{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}}
+.copy-btn:hover {{
+  background: var(--cyan);
+  color: #000;
+}}
+
+/* PRO UPSELL CARD & MODAL */
+.pro-banner {{
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(88, 28, 135, 0.4) 100%);
+  border: 1px solid #3b82f6;
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}}
+@media (max-width: 800px) {{
+  .pro-banner {{ flex-direction: column; align-items: flex-start; }}
+}}
+.pro-badge {{
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}}
+.template-item {{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--surface-card);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}}
+
+/* ALERT BOXES */
+.alert {{
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.4;
+}}
+.alert-warning {{
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+}}
+.alert-danger {{
+  background: var(--rose-dim);
+  border: 1px solid var(--rose);
+  color: var(--rose);
+}}
+.alert-info {{
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}}
+
+/* MODAL */
+.modal-overlay {{
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}}
+.modal-overlay.active {{
+  opacity: 1;
+  pointer-events: auto;
+}}
+.modal-dialog {{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 600px;
+  width: 90%;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  max-height: 90vh;
+  overflow-y: auto;
+}}
+.modal-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}}
+.modal-close {{
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}}
+
+/* PRINT STYLES */
+@media print {{
+  .top-nav, .eu-flag-banner, .tabs-nav, .nav-actions, .btn, .opt-btn, .copy-btn, .pro-banner {{
+    display: none !important;
+  }}
+  body {{
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+  }}
+  .card, .stat-card, .check-item {{
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }}
+  .tab-pane {{
+    display: block !important;
+    opacity: 1 !important;
+  }}
+}}
+</style>
+</head>
+<body>
+
+<!-- TOP EU NOTIFICATION BANNER -->
+<div class="eu-flag-banner">
+  <div>
+    <span class="tag">EU 2026 MANDATE</span>
+    <strong>Cyber Resilience Act (CRA)</strong>: 24h vulnerability reporting applies <strong>September 2026</strong>. <strong>NIS2 Directive</strong> enforcement live across EU member states.
+  </div>
+  <div style="display:flex; gap:12px; align-items:center;">
+    <span>Zero Dependencies &bull; 100% Client-Side Local Data</span>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<header class="top-nav">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-title">
+        EU CYBER SHIELD 2026
+        <span class="badge">CRA &amp; NIS2 AUDITOR</span>
+      </div>
+      <div class="brand-sub">Self-Assessment, Gap Engine &amp; SBOM Policy Generator for European Software Vendors</div>
+    </div>
+  </div>
+
+  <div class="nav-actions">
+    <button class="btn btn-outline btn-sm" onclick="toggleTheme()" id="themeBtn" title="Toggle Dark/Light Mode">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      Theme
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="exportAuditJSON()" title="Export Audit JSON">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Save State
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="triggerImportJSON()" title="Load Audit JSON">
+      <input type="file" id="importInput" style="display:none;" accept=".json" onchange="importAuditJSON(event)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import
+    </button>
+    <button class="btn btn-gold btn-sm" onclick="openProModal()">
+      <span class="pro-badge" style="font-size:9px; padding:2px 5px;">PRO</span>
+      €9 Incident Templates
+    </button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- PRE-FILL SHORTCUTS & DEMO BAR -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+    <div style="font-size:13px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+      <strong>Quick Scenario Presets:</strong>
+      <button class="btn btn-outline btn-sm" onclick="loadPreset('saas_growth')">SaaS Vendor (65 Staff &bull; NIS2 Important)</button>
+      <button class="btn btn-outline btn-sm" onclick="loadPreset('critical_software')">Security Software (CRA Class I)</button>
+      <button class="btn btn-outline btn-sm" onclick="loadPreset('micro_startup')">Micro SaaS (&lt;10 Staff &bull; Supply Chain)</button>
+      <button class="btn btn-outline btn-sm" onclick="resetAllData()" style="color:var(--rose);">Reset</button>
+    </div>
+    <div id="proUnlockedBadge" style="display:none;" class="badge">
+      <span style="color:var(--emerald); font-weight:700;">&#10004; PRO PACK UNLOCKED</span>
+    </div>
+  </div>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('profile', this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      1. Profile &amp; Scope
+    </button>
+    <button class="tab-btn" onclick="switchTab('cra', this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      2. CRA Auditor (Reg 2024/2847)
+      <span class="tab-badge" id="craTabBadge">0/12</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('nis2', this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      3. NIS2 Auditor (Dir 2022/2555)
+      <span class="tab-badge" id="nis2TabBadge">0/12</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('results', this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      4. Gap Analysis &amp; Action Plan
+    </button>
+    <button class="tab-btn" onclick="switchTab('sbom', this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      5. SBOM &amp; Security.txt Tool
+    </button>
+    <button class="tab-btn" onclick="switchTab('pro', this)" style="color:var(--eu-gold);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      6. €9 Pro Incident Pack
+    </button>
+  </nav>
+
+  <!-- TAB 1: PROFILE & SCOPE -->
+  <section id="tab-profile" class="tab-pane active">
+    <div class="grid-2">
+      <!-- Left: Entity Profile Details -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Organization &amp; Product Characteristics</div>
+            <div class="card-subtitle">Determines statutory scope under NIS2 Directives and Cyber Resilience Act (CRA).</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Legal Organization Name</label>
+          <input type="text" class="form-control" id="orgName" placeholder="e.g., NovaCloud Europe GmbH" oninput="updateProfile()">
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Primary Product / Service Name</label>
+            <input type="text" class="form-control" id="productName" placeholder="e.g., NovaSecure Gateway API" oninput="updateProfile()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">EU Member State Jurisdiction</label>
+            <select class="form-control" id="euState" onchange="updateProfile()">
+              <option value="Germany (BSI / NIS2UmsuCG)">Germany (BSI / NIS2UmsuCG)</option>
+              <option value="France (ANSSI)">France (ANSSI)</option>
+              <option value="Netherlands (NCSC-NL)">Netherlands (NCSC-NL)</option>
+              <option value="Ireland (NCSC-IE)">Ireland (NCSC-IE)</option>
+              <option value="Spain (CCN-CERT / INCIBE)">Spain (CCN-CERT / INCIBE)</option>
+              <option value="Italy (ACN)">Italy (ACN)</option>
+              <option value="Belgium (CCB)">Belgium (CCB)</option>
+              <option value="Sweden (MSB)">Sweden (MSB)</option>
+              <option value="Poland (CSIRT NASK / GOV)">Poland (CSIRT NASK / GOV)</option>
+              <option value="Non-EU (Exporting into European Union)">Non-EU (Selling / Operating in EU)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Headcount (Full-Time Equivalents)</label>
+            <input type="number" class="form-control" id="empCount" value="48" min="1" max="100000" oninput="updateProfile()">
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">NIS2 threshold: &gt;50 FTE triggers Medium status.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Annual Turnover (€ EUR)</label>
+            <input type="number" class="form-control" id="annualRevenue" value="9500000" min="0" step="100000" oninput="updateProfile()">
+            <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">NIS2 threshold: &gt;€10M triggers Medium status.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Sector Classification (NIS2 Annex I / II)</label>
+          <select class="form-control" id="nis2Sector" onchange="updateProfile()">
+            <option value="digital_infra">Digital Infrastructure (Cloud, DNS, TLD, Datacenter, CDN) - Essential</option>
+            <option value="ict_b2b">ICT Service Management B2B (Managed Services / MSSP) - Essential/Important</option>
+            <option value="digital_providers">Digital Providers (Online Marketplaces, SaaS, Search, Social) - Important</option>
+            <option value="software_vendor">Software Vendor / Developer (Supply Chain to Critical Entities) - Important/Vendor</option>
+            <option value="financial_banking">Banking / Financial Market Infrastructures (DORA/NIS2)</option>
+            <option value="healthcare">Health &amp; Life Sciences</option>
+            <option value="manufacturing">Manufacturing &amp; Industrial Equipment</option>
+            <option value="other_critical">Other Essential / Critical Sector</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">CRA Product Scope (Regulation (EU) 2024/2847)</label>
+          <select class="form-control" id="craCategory" onchange="updateProfile()">
+            <option value="standard">Standard Product with Digital Elements (Self-Assessment Module A)</option>
+            <option value="class1">Important Product Class I (Identity Management, Browsers, VPNs, Password Mgrs)</option>
+            <option value="class2">Important Product Class II (Firewalls, OS, Hypervisors, Microprocessors)</option>
+            <option value="critical">Critical Product (Tamper-Resistant HW, Smart Meter Gateways)</option>
+            <option value="pure_saas">Pure Cloud SaaS (Covered via NIS2; CRA applies if companion clients/agents exist)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Right: Automated Regulatory Classification & Fine Exposure -->
+      <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div class="card-header">
+            <div>
+              <div class="card-title">Statutory Scope &amp; Fine Risk Engine</div>
+              <div class="card-subtitle">Calculated according to official EU directive thresholds.</div>
+            </div>
+            <span class="badge" id="scopeStatusBadge" style="background:var(--cyan-dim); color:var(--cyan); border:1px solid var(--cyan);">EVALUATING</span>
+          </div>
+
+          <div class="alert alert-info" id="scopeSummaryBox">
+            <div>
+              <strong id="scopeVerdictTitle">Evaluating Classification...</strong>
+              <div id="scopeVerdictDesc" style="margin-top:4px; font-size:12px;">Based on your headcount and revenue, your organization's legal posture is calculated below.</div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-bottom:16px;">
+            <div class="stat-card">
+              <span class="stat-label">NIS2 Designation</span>
+              <span class="stat-val" style="font-size:18px; color:var(--eu-gold);" id="nis2DesignationText">Important Entity</span>
+              <span class="stat-desc" id="nis2DesignationBasis">Direct enforcement active.</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">CRA Conformity Track</span>
+              <span class="stat-val" style="font-size:18px; color:var(--cyan);" id="craDesignationText">Module A (Self-Assessment)</span>
+              <span class="stat-desc" id="craDesignationBasis">CE Marking required by 2027.</span>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--surface-card); border-color:var(--rose); margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:700; color:var(--rose); text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Maximum Statutory Fine Exposure (Combined)
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:8px;">
+              <div style="font-size:28px; font-weight:800; color:var(--text-main);" id="calculatedMaxFine">€7,000,000</div>
+              <div style="font-size:11px; color:var(--text-dim); text-align:right;">
+                NIS2: up to €7M or 1.4% turnover<br>
+                CRA: up to €15M or 2.5% turnover
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-warning" style="margin-bottom:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div style="font-size:12px;">
+              <strong>Article 20 Board Personal Liability:</strong> Management body members can be held personally liable and face temporary bans from managerial positions in essential/important entities for non-compliance.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="switchTab('cra', document.querySelectorAll('.tab-btn')[1])" style="width:100%;">
+            Proceed to CRA Audit &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: CRA AUDITOR (Cyber Resilience Act) -->
+  <section id="tab-cra" class="tab-pane">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">EU Cyber Resilience Act (Regulation (EU) 2024/2847) Checklist</div>
+          <div class="card-subtitle">Essential Cybersecurity Requirements (Annex I) &amp; Manufacturer Obligations (Articles 10, 11, 13).</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:12px; color:var(--text-muted);">CRA Readiness:</span>
+          <span style="font-size:18px; font-weight:800; color:var(--cyan); margin-left:6px;" id="craScoreBanner">0%</span>
+        </div>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+        Evaluates your software product against mandatory EU CRA security-by-design, machine-readable SBOM generation, 24-hour vulnerability notification to ENISA/CSIRT, and the minimum 5-year security update guarantee.
+      </p>
+
+      <div id="craChecklistContainer"></div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between;">
+      <button class="btn btn-outline" onclick="switchTab('profile', document.querySelectorAll('.tab-btn')[0])">&larr; Back to Profile</button>
+      <button class="btn btn-primary" onclick="switchTab('nis2', document.querySelectorAll('.tab-btn')[2])">Proceed to NIS2 Audit &rarr;</button>
+    </div>
+  </section>
+
+  <!-- TAB 3: NIS2 AUDITOR (Directive (EU) 2022/2555) -->
+  <section id="tab-nis2" class="tab-pane">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">EU NIS2 Directive Compliance Checklist (Directive (EU) 2022/2555)</div>
+          <div class="card-subtitle">Article 20 (Board Oversight), Article 21 (10 Risk Management Pillars), Article 23 (24h/72h Incident Reporting).</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size:12px; color:var(--text-muted);">NIS2 Readiness:</span>
+          <span style="font-size:18px; font-weight:800; color:var(--eu-gold); margin-left:6px;" id="nis2ScoreBanner">0%</span>
+        </div>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+        Covers management body approvals, supply chain vendor assessments, business continuity &amp; immutable backup policies, and statutory incident notification thresholds.
+      </p>
+
+      <div id="nis2ChecklistContainer"></div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between;">
+      <button class="btn btn-outline" onclick="switchTab('cra', document.querySelectorAll('.tab-btn')[1])">&larr; Back to CRA Audit</button>
+      <button class="btn btn-primary" onclick="switchTab('results', document.querySelectorAll('.tab-btn')[3])">View Gap Analysis &amp; Action Plan &rarr;</button>
+    </div>
+  </section>
+
+  <!-- TAB 4: RESULTS & GAP ANALYSIS -->
+  <section id="tab-results" class="tab-pane">
+    <!-- Top KPI Cards -->
+    <div class="grid-4" style="margin-bottom:20px;">
+      <div class="card gauge-container">
+        <svg class="circle-chart" viewBox="0 0 36 36">
+          <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="circle-progress" id="compositeGaugePath" stroke="var(--cyan)" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <text x="18" y="20" class="gauge-pct" text-anchor="middle" id="compositeScoreText">0%</text>
+        </svg>
+        <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-top:6px;">Overall Compliance Index</div>
+        <div style="font-size:11px; color:var(--text-dim);" id="compositeScoreRating">Non-Compliant</div>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">CRA Readiness (2024/2847)</span>
+        <div class="stat-val" id="resCraScoreVal" style="color:var(--cyan);">0%</div>
+        <div class="bar-track">
+          <div class="bar-fill" id="resCraBar" style="width:0%; background:var(--cyan);"></div>
+        </div>
+        <span class="stat-desc" id="resCraStatusDesc">12 mandatory items evaluated</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">NIS2 Readiness (2022/2555)</span>
+        <div class="stat-val" id="resNis2ScoreVal" style="color:var(--eu-gold);">0%</div>
+        <div class="bar-track">
+          <div class="bar-fill" id="resNis2Bar" style="width:0%; background:var(--eu-gold);"></div>
+        </div>
+        <span class="stat-desc" id="resNis2StatusDesc">Article 20, 21 &amp; 23 controls</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">High-Risk Gaps Detected</span>
+        <div class="stat-val" id="highRiskGapsCount" style="color:var(--rose);">0</div>
+        <span class="stat-desc">Trigger potential CSIRT fines or personal board liability</span>
+      </div>
+    </div>
+
+    <!-- Executive Audit Actions & Export Toolbar -->
+    <div class="card" style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <div style="font-size:15px; font-weight:700;">Executive Audit Documentation</div>
+        <div style="font-size:12px; color:var(--text-muted);">Generate auditor-ready reports for leadership, customers, and regulatory authorities.</div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-outline" onclick="window.print()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / Save PDF Report
+        </button>
+        <button class="btn btn-primary" onclick="downloadMarkdownAuditReport()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Executive Report (.md)
+        </button>
+      </div>
+    </div>
+
+    <!-- Prioritized Gap Matrix & Actionable Remediation Roadmap -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Prioritized Regulatory Gaps &amp; Remediation Roadmap</div>
+          <div class="card-subtitle">Automated severity ranking based on 2026 CSIRT enforcement guidelines.</div>
+        </div>
+      </div>
+
+      <div id="gapContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 5: SBOM & SECURITY.TXT GENERATOR -->
+  <section id="tab-sbom" class="tab-pane">
+    <div class="pro-banner">
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span class="pro-badge">CRA Annex I &bull; RFC 9116</span>
+          <strong style="color:#fff; font-size:16px;">Automated Software Bill of Materials &amp; Coordinated Disclosure Suite</strong>
+        </div>
+        <div style="font-size:13px; color:#cbd5e1; max-width:720px;">
+          The EU CRA strictly mandates that every product with digital elements maintain a machine-readable Software Bill of Materials (SBOM) and a publicly reachable Coordinated Vulnerability Disclosure endpoint.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Input Configuration -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">SBOM &amp; Disclosure Parameters</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">SBOM Standard Format</label>
+          <div style="display:flex; gap:12px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="radio" name="sbomFormat" value="cyclonedx" checked onchange="regenerateSbom()">
+              <strong>CycloneDX 1.6 (JSON - Recommended for CRA)</strong>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+              <input type="radio" name="sbomFormat" value="spdx" onchange="regenerateSbom()">
+              <strong>SPDX 2.3 (JSON)</strong>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Component / Package Name</label>
+            <input type="text" class="form-control" id="sbomPkgName" value="@acme/cloud-core" oninput="regenerateSbom()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Version</label>
+            <input type="text" class="form-control" id="sbomVersion" value="2.4.0" oninput="regenerateSbom()">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Security Contact Email (RFC 9116)</label>
+            <input type="email" class="form-control" id="securityEmail" value="security@company.eu" oninput="regenerateSbom()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PGP Key URL or Fingerprint</label>
+            <input type="text" class="form-control" id="securityPgp" value="https://company.eu/pgp-key.txt" oninput="regenerateSbom()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Security Policy Web URL</label>
+          <input type="text" class="form-control" id="securityPolicyUrl" value="https://company.eu/security-policy" oninput="regenerateSbom()">
+        </div>
+
+        <div style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label class="form-label" style="margin-bottom:0;">Core Dependency Stack</label>
+            <button class="btn btn-outline btn-sm" onclick="addSbomDependency()">+ Add Component</button>
+          </div>
+          <div id="dependencyListContainer">
+            <!-- Dynamic dependency inputs -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Generated Artifacts -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Generated Compliance Artifacts</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-outline btn-sm active" id="btnArtifactSbom" onclick="showArtifactTab('sbom')">SBOM</button>
+            <button class="btn btn-outline btn-sm" id="btnArtifactSecTxt" onclick="showArtifactTab('sectxt')">security.txt</button>
+            <button class="btn btn-outline btn-sm" id="btnArtifactPolicy" onclick="showArtifactTab('policy')">Policy Doc</button>
+          </div>
+        </div>
+
+        <!-- Artifact 1: SBOM JSON -->
+        <div id="artifactPaneSbom">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--text-dim);" id="sbomFormatLabel">CycloneDX 1.6 Specification</span>
+            <button class="btn btn-primary btn-sm" onclick="downloadArtifact('sbom')">Download JSON</button>
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyBoxText('sbomJsonOutput')">Copy</button>
+            <code id="sbomJsonOutput"></code>
+          </div>
+        </div>
+
+        <!-- Artifact 2: security.txt -->
+        <div id="artifactPaneSecTxt" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--text-dim);">RFC 9116 Compliant .well-known/security.txt</span>
+            <button class="btn btn-primary btn-sm" onclick="downloadArtifact('sectxt')">Download security.txt</button>
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyBoxText('secTxtOutput')">Copy</button>
+            <code id="secTxtOutput"></code>
+          </div>
+        </div>
+
+        <!-- Artifact 3: Corporate Policy -->
+        <div id="artifactPanePolicy" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--text-dim);">Corporate SBOM &amp; Vulnerability Policy</span>
+            <button class="btn btn-primary btn-sm" onclick="downloadArtifact('policy')">Download Policy (.md)</button>
+          </div>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyBoxText('policyOutput')">Copy</button>
+            <code id="policyOutput"></code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 6: PRO INCIDENT RESPONSE PACK (€9) -->
+  <section id="tab-pro" class="tab-pane">
+    <div class="pro-banner">
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span class="pro-badge">PRO SUITE</span>
+          <span style="font-size:20px; font-weight:800; color:#fff;">EU NIS2 &amp; CRA Pro Incident Response Pack</span>
+        </div>
+        <p style="font-size:14px; color:#cbd5e1; max-width:760px; line-height:1.5;">
+          Article 23 of NIS2 requires filing an official early warning within <strong>24 hours</strong> of discovering a significant incident. Failure to report carries fines up to <strong>€10,000,000</strong> and personal board liability. Get the complete battle-tested notification templates, board resolutions, and supply chain audit questionnaires for just €9.
+        </p>
+      </div>
+      <div style="text-align:right; min-width:200px;">
+        <div style="font-size:32px; font-weight:800; color:#fbbf24;">€9 <span style="font-size:14px; color:#94a3b8; font-weight:400;">one-time</span></div>
+        <div style="font-size:12px; color:#93c5fd; margin-bottom:10px;">Immediate Lifetime Access</div>
+        <button class="btn btn-gold" onclick="openProModal()" style="width:100%; justify-content:center;">Unlock All 6 Templates</button>
+      </div>
+    </div>
+
+    <!-- Template Viewer & Downloader -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Included Legal &amp; Technical Documents</div>
+            <div class="card-subtitle">Click to preview and export any template in real time.</div>
+          </div>
+        </div>
+
+        <div id="proTemplatesList">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:flex; gap:10px;">
+          <button class="btn btn-primary" onclick="downloadAllProTemplates()" style="width:100%;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download All 6 Documents (.zip / bundle)
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Markdown Preview -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="selectedTemplateTitle">Template Preview</div>
+            <div class="card-subtitle" id="selectedTemplateSubtitle">Select a template to inspect.</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="copyBoxText('proTemplatePreview')">Copy</button>
+            <button class="btn btn-outline btn-sm" onclick="downloadActiveProTemplate()">Download .md</button>
+          </div>
+        </div>
+
+        <div class="code-box" style="max-height:540px;">
+          <code id="proTemplatePreview"></code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- PRO CHECKOUT & UNLOCK MODAL -->
+<div class="modal-overlay" id="proModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="pro-badge">LIFETIME ACCESS</span>
+        <strong style="font-size:17px;">EU NIS2 &amp; CRA Pro Incident Response Pack</strong>
+      </div>
+      <button class="modal-close" onclick="closeProModal()">&times;</button>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:14px; color:var(--text-muted); line-height:1.5;">
+        Complete legal templates ready to fill during an active security incident or regulatory audit. Avoid €1,500+ hourly tech-lawyer bills when responding to ENISA / CSIRT.
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--surface-card); margin-bottom:18px;">
+      <ul style="list-style:none; font-size:13px; line-height:1.8;">
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>NIS2 Art. 23(4)(a)</strong> 24-Hour CSIRT Early Warning Template
+        </li>
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>NIS2 Art. 23(4)(b)</strong> 72-Hour Intermediate Incident Notification Form
+        </li>
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>NIS2 Art. 23(4)(e)</strong> 1-Month Final Incident &amp; RCA Form
+        </li>
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>CRA Art. 11</strong> Actively Exploited Vulnerability Notification
+        </li>
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>NIS2 Art. 20</strong> Board Oversight &amp; Liability Defense Resolution
+        </li>
+        <li style="display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--emerald);">&#10004;</span> <strong>NIS2 Art. 21(2)(d)</strong> 25-Point Supply Chain Vendor Questionnaire
+        </li>
+      </ul>
+    </div>
+
+    <!-- Purchase CTAs -->
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+      <a href="https://buy.stripe.com/test_placeholder_nis2_cra" target="_blank" class="btn btn-gold" style="justify-content:center; padding:12px; font-size:15px; text-decoration:none;">
+        Pay €9 via Stripe / Card (Instant Unlock)
+      </a>
+      <a href="https://polar.sh/checkout/placeholder" target="_blank" class="btn btn-outline" style="justify-content:center; padding:10px; font-size:13px; text-decoration:none;">
+        Pay via Polar.sh / LemonSqueezy
+      </a>
+    </div>
+
+    <!-- Promo / Demo Code Unlock -->
+    <div style="border-top:1px solid var(--border); padding-top:14px;">
+      <div style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Have a License Key or Partner Code?</div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" class="form-control" id="licenseCodeInput" placeholder="Enter key (e.g., EUR-RESILIENCE-2026)">
+        <button class="btn btn-primary" onclick="verifyLicenseCode()">Unlock</button>
+      </div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">
+        Tip: Enter <code style="color:var(--cyan);">EUR-RESILIENCE-2026</code> for instant full evaluation unlock.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMBEDDED JAVASCRIPT LOGIC -->
+<script>
+/* PRO TEMPLATES EMBEDDED DATA */
+const PRO_TEMPLATES = {templates_json};
+
+/* CRA CHECKLIST DEFINITIONS (Annex I & Articles 10, 11, 13) */
+const CRA_ITEMS = [
+  {{
+    id: "CRA-01",
+    category: "Architecture & Security-by-Design",
+    article: "CRA Annex I, Part I (1)(a)",
+    title: "Minimal Attack Surface & Zero Default Passwords",
+    desc: "Ensure products are designed without hardcoded default credentials or unencrypted administrative channels. Unused ports, daemons, and debug endpoints must be disabled by default.",
+    weight: 10,
+    impact: "High Fine Risk (Article 53: up to €15M or 2.5% turnover)"
+  }},
+  {{
+    id: "CRA-02",
+    category: "Architecture & Security-by-Design",
+    article: "CRA Annex I, Part I (1)(c)",
+    title: "Cryptographic Protection & Modern Cipher Suites",
+    desc: "Data in transit and at rest must employ modern, authenticated encryption algorithms (AES-256, TLS 1.3, Ed25519) and prohibit legacy protocols (SSL, TLS 1.0/1.1, DES).",
+    weight: 9,
+    impact: "Critical Conformity Blocker"
+  }},
+  {{
+    id: "CRA-03",
+    category: "Architecture & Security-by-Design",
+    article: "CRA Annex I, Part I (1)(g)",
+    title: "Exploit Mitigation & Memory Safety Controls",
+    desc: "Implement modern compiler hardening (ASLR, DEP, Stack Canaries, FORTIFY_SOURCE) and safe memory management to mitigate common memory corruption flaws (CWE-119).",
+    weight: 8,
+    impact: "Technical Standard Compliance"
+  }},
+  {{
+    id: "CRA-04",
+    category: "Vulnerability Handling & 24h CSIRT",
+    article: "CRA Article 11(1)",
+    title: "24-Hour ENISA & CSIRT Active Exploit Reporting Pipeline",
+    desc: "Operational mechanism and SLA in place to formally notify the designated national CSIRT and ENISA within 24 hours of becoming aware of any actively exploited vulnerability.",
+    weight: 10,
+    impact: "Mandatory Sept 2026 Legal Deadline"
+  }},
+  {{
+    id: "CRA-05",
+    category: "Vulnerability Handling & 24h CSIRT",
+    article: "CRA Article 10(6) & RFC 9116",
+    title: "Coordinated Vulnerability Disclosure (CVD) & security.txt",
+    desc: "A public, reachable Coordinated Vulnerability Disclosure policy exists, including a valid /.well-known/security.txt with security contact email, PGP keys, and bug acknowledgment policy.",
+    weight: 7,
+    impact: "Mandatory Public Endpoint"
+  }},
+  {{
+    id: "CRA-06",
+    category: "Vulnerability Handling & 24h CSIRT",
+    article: "CRA Annex I, Part II (2)",
+    title: "Automated CI/CD Vulnerability Scanning & Penetration Audits",
+    desc: "Static and dynamic security testing (SAST/DAST) integrated into CI/CD pipelines, complemented by at least annual third-party independent penetration tests.",
+    weight: 8,
+    impact: "Audit File Requirement"
+  }},
+  {{
+    id: "CRA-07",
+    category: "Software Bill of Materials (SBOM)",
+    article: "CRA Annex I, Part II (1)",
+    title: "Machine-Readable Software Bill of Materials (SBOM)",
+    desc: "Systematic generation and tracking of machine-readable SBOMs (CycloneDX 1.5+ or SPDX 2.3+) documenting all direct and transitive third-party libraries for every release.",
+    weight: 10,
+    impact: "Mandatory CE Marking File"
+  }},
+  {{
+    id: "CRA-08",
+    category: "Software Bill of Materials (SBOM)",
+    article: "CRA Article 10(4)",
+    title: "Upstream Dependency Due Diligence & Rapid Patch SLA",
+    desc: "Formal triage process for third-party open-source components with contractual/operational SLA to patch critical known CVEs within 48 to 72 hours of disclosure.",
+    weight: 9,
+    impact: "Supply Chain Requirement"
+  }},
+  {{
+    id: "CRA-09",
+    category: "Maintenance, Updates & CE Conformity",
+    article: "CRA Article 10(7)",
+    title: "5-Year Free Security Support Guarantee",
+    desc: "Contractual commitment to provide security patches free of charge for the expected product lifetime or at least 5 years from release to the EU market.",
+    weight: 9,
+    impact: "Commercial Contract Clause"
+  }},
+  {{
+    id: "CRA-10",
+    category: "Maintenance, Updates & CE Conformity",
+    article: "CRA Annex I, Part II (3)",
+    title: "Cryptographically Signed & Automated Over-the-Air Updates",
+    desc: "Software updates must be delivered with cryptographic signatures (Sigstore, GPG, Authenticode) and secure rollback mechanisms to prevent malicious bricking.",
+    weight: 8,
+    impact: "Product Integrity Check"
+  }},
+  {{
+    id: "CRA-11",
+    category: "Maintenance, Updates & CE Conformity",
+    article: "CRA Article 23 & Annex V",
+    title: "10-Year Technical Documentation & Risk Assessment Archive",
+    desc: "Comprehensive technical file detailing threat models, cybersecurity risks, test reports, and SBOMs archived and accessible to EU market authorities for 10 years.",
+    weight: 7,
+    impact: "Regulatory Archive Obligation"
+  }},
+  {{
+    id: "CRA-12",
+    category: "Maintenance, Updates & CE Conformity",
+    article: "CRA Articles 24-26 & Annex VI",
+    title: "EU Declaration of Conformity & CE Marking",
+    desc: "Formal EU Declaration of Conformity issued (Module A internal production control for standard products, or accredited notified body assessment for Class I/II) and CE mark affixed.",
+    weight: 10,
+    impact: "Legal Right to Sell in EU"
+  }}
+];
+
+/* NIS2 CHECKLIST DEFINITIONS (Articles 20, 21, 23) */
+const NIS2_ITEMS = [
+  {{
+    id: "NIS2-01",
+    category: "Governance & Board Liability",
+    article: "NIS2 Article 20(1)",
+    title: "Formal Management Body Approval of Cybersecurity Measures",
+    desc: "The Management Board / Managing Directors have formally approved the information security risk management policies and actively supervise their implementation.",
+    weight: 10,
+    impact: "Protects against Board Personal Liability"
+  }},
+  {{
+    id: "NIS2-02",
+    category: "Governance & Board Liability",
+    article: "NIS2 Article 20(2)",
+    title: "Mandatory Board Member Cybersecurity Governance Training",
+    desc: "C-level executives and board members have completed accredited cybersecurity governance training to identify risks and assess impact on company operations.",
+    weight: 8,
+    impact: "Statutory Personal Defense"
+  }},
+  {{
+    id: "NIS2-03",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(a)",
+    title: "Information Security Management System (ISMS) & Risk Analysis",
+    desc: "Documented information security policies, regular threat modeling, and formal asset risk assessments (aligned with ISO 27001 or equivalent framework).",
+    weight: 9,
+    impact: "Baseline Regulatory Audit Point"
+  }},
+  {{
+    id: "NIS2-04",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(j)",
+    title: "Mandatory Phishing-Resistant Multi-Factor Authentication (MFA)",
+    desc: "Enforcement of MFA (FIDO2 / WebAuthn / TOTP) across 100% of employees, contractors, remote access, VPNs, and administrative portals.",
+    weight: 10,
+    impact: "Critical Technical Defense"
+  }},
+  {{
+    id: "NIS2-05",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(h)",
+    title: "End-to-End Cryptography & Key Management Policies",
+    desc: "Formal cryptography standards governing data at rest (AES-256), in transit (TLS 1.3), and strict lifecycle management of encryption keys in HSMs / KMS.",
+    weight: 8,
+    impact: "Data Protection Baseline"
+  }},
+  {{
+    id: "NIS2-06",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(c)",
+    title: "Immutable Air-Gapped Backups & Disaster Recovery (DR) Testing",
+    desc: "Regular backup generation with write-once-read-many (WORM) or air-gapped isolation against ransomware, tested annually with verified RTO (<4h) and RPO (<1h).",
+    weight: 10,
+    impact: "Ransomware Survival Mandate"
+  }},
+  {{
+    id: "NIS2-07",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(d)",
+    title: "Supply Chain & Direct Supplier Cybersecurity Due Diligence",
+    desc: "Formal supplier security assessment (25-point questionnaire), tracking third-party service providers and enforcing cybersecurity SLAs contractually.",
+    weight: 9,
+    impact: "Supply Chain Audit Exposure"
+  }},
+  {{
+    id: "NIS2-08",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(e)",
+    title: "System Acquisition & Continuous Vulnerability Management",
+    desc: "Secure software development lifecycle (SSDLC), continuous network vulnerability scanning, and coordinated disclosure channel for infrastructure assets.",
+    weight: 8,
+    impact: "Vulnerability Management Core"
+  }},
+  {{
+    id: "NIS2-09",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(g)",
+    title: "Cyber Hygiene & Continuous Employee Phishing Simulations",
+    desc: "Mandatory ongoing cyber hygiene training and recurring simulated phishing campaigns for all organizational personnel.",
+    weight: 7,
+    impact: "Human Risk Reduction"
+  }},
+  {{
+    id: "NIS2-10",
+    category: "Article 21 Risk Management Measures",
+    article: "NIS2 Article 21(2)(f)",
+    title: "Effectiveness Audits & Red Team / Penetration Testing",
+    desc: "Procedures and independent audits to regularly verify and stress-test the effectiveness of implemented cybersecurity risk controls.",
+    weight: 8,
+    impact: "Verification Standard"
+  }},
+  {{
+    id: "NIS2-11",
+    category: "Article 23 Incident Reporting SLAs",
+    article: "NIS2 Article 23(4)(a)",
+    title: "24-Hour CSIRT Early Warning Capability",
+    desc: "Standard Operating Procedure (SOP) and designated 24/7 on-call lead to notify the National CSIRT within 24 hours of detecting a significant incident.",
+    weight: 10,
+    impact: "Immediate CSIRT Fine Trigger"
+  }},
+  {{
+    id: "NIS2-12",
+    category: "Article 23 Incident Reporting SLAs",
+    article: "NIS2 Article 23(4)(b),(e)",
+    title: "72-Hour Detailed Notification & 1-Month Final RCA Report",
+    desc: "Established forensic capability to file the comprehensive 72-hour incident assessment and 1-month final root cause analysis to the competent authorities.",
+    weight: 9,
+    impact: "Formal Legal Dossier"
+  }}
+];
+
+/* DEFAULT STATE */
+let state = {{
+  profile: {{
+    orgName: "NovaCloud Europe GmbH",
+    productName: "NovaSecure Gateway API",
+    euState: "Germany (BSI / NIS2UmsuCG)",
+    empCount: 65,
+    annualRevenue: 14500000,
+    nis2Sector: "digital_infra",
+    craCategory: "standard"
+  }},
+  craAnswers: {{}},
+  nis2Answers: {{}},
+  sbom: {{
+    format: "cyclonedx",
+    pkgName: "@acme/cloud-gateway",
+    version: "2.4.0",
+    securityEmail: "security@company.eu",
+    pgpUrl: "https://company.eu/pgp-key.txt",
+    policyUrl: "https://company.eu/security-policy",
+    dependencies: [
+      {{ name: "express", version: "4.19.2", ecosystem: "npm", license: "MIT", hash: "a3b2c19e8f..." }},
+      {{ name: "jsonwebtoken", version: "9.0.2", ecosystem: "npm", license: "MIT", hash: "4f7e2a9b1c..." }},
+      {{ name: "pg", version: "8.11.3", ecosystem: "npm", license: "MIT", hash: "99e1a84f3d..." }},
+      {{ name: "crypto-js", version: "4.2.0", ecosystem: "npm", license: "MIT", hash: "e10adc3949..." }}
+    ]
+  }},
+  isProUnlocked: false,
+  activeProTemplateKey: "nis2_24h"
+}};
+
+/* INITIALIZATION */
+document.addEventListener("DOMContentLoaded", () => {{
+  loadStateFromStorage();
+  renderProfileInputs();
+  renderCraChecklist();
+  renderNis2Checklist();
+  renderProTemplatesUI();
+  renderDependencyInputs();
+  recalculateAll();
+  regenerateSbom();
+}});
+
+/* PERSISTENCE */
+function saveStateToStorage() {{
+  try {{
+    localStorage.setItem("eu_cyber_shield_state", JSON.stringify(state));
+  }} catch(e) {{
+    console.error("Storage error", e);
+  }}
+}}
+
+function loadStateFromStorage() {{
+  try {{
+    const saved = localStorage.getItem("eu_cyber_shield_state");
+    if (saved) {{
+      const parsed = JSON.parse(saved);
+      state = Object.assign(state, parsed);
+    }}
+  }} catch(e) {{
+    console.error("Storage load error", e);
+  }}
+  if (state.isProUnlocked) {{
+    document.getElementById("proUnlockedBadge").style.display = "inline-flex";
+  }}
+}}
+
+/* THEME TOGGLE */
+function toggleTheme() {{
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+}}
+
+/* TAB SWITCHING */
+function switchTab(tabId, btn) {{
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  const target = document.getElementById("tab-" + tabId);
+  if (target) target.classList.add("active");
+  if (btn) btn.classList.add("active");
+  
+  if (tabId === "results") {{
+    recalculateAll();
+    renderGapAnalysis();
+  }} else if (tabId === "sbom") {{
+    regenerateSbom();
+  }}
+}}
+
+/* PROFILE LOGIC */
+function renderProfileInputs() {{
+  document.getElementById("orgName").value = state.profile.orgName || "";
+  document.getElementById("productName").value = state.profile.productName || "";
+  document.getElementById("euState").value = state.profile.euState || "Germany (BSI / NIS2UmsuCG)";
+  document.getElementById("empCount").value = state.profile.empCount || 50;
+  document.getElementById("annualRevenue").value = state.profile.annualRevenue || 10000000;
+  document.getElementById("nis2Sector").value = state.profile.nis2Sector || "digital_infra";
+  document.getElementById("craCategory").value = state.profile.craCategory || "standard";
+}}
+
+function updateProfile() {{
+  state.profile.orgName = document.getElementById("orgName").value.trim() || "Organization";
+  state.profile.productName = document.getElementById("productName").value.trim() || "Software Product";
+  state.profile.euState = document.getElementById("euState").value;
+  state.profile.empCount = parseInt(document.getElementById("empCount").value) || 1;
+  state.profile.annualRevenue = parseFloat(document.getElementById("annualRevenue").value) || 0;
+  state.profile.nis2Sector = document.getElementById("nis2Sector").value;
+  state.profile.craCategory = document.getElementById("craCategory").value;
+
+  recalculateAll();
+  saveStateToStorage();
+}}
+
+/* PRESETS */
+function loadPreset(presetKey) {{
+  if (presetKey === "saas_growth") {{
+    state.profile = {{
+      orgName: "SaaSify Cloud Systems B.V.",
+      productName: "SaaSify API Platform",
+      euState: "Netherlands (NCSC-NL)",
+      empCount: 65,
+      annualRevenue: 14500000,
+      nis2Sector: "digital_infra",
+      craCategory: "standard"
+    }};
+    // Pre-populate realistic answers
+    CRA_ITEMS.forEach((it, idx) => {{
+      state.craAnswers[it.id] = (idx % 3 === 0) ? "compliant" : (idx % 2 === 0 ? "progress" : "non_compliant");
+    }});
+    NIS2_ITEMS.forEach((it, idx) => {{
+      state.nis2Answers[it.id] = (idx % 2 === 0) ? "compliant" : "progress";
+    }});
+  }} else if (presetKey === "critical_software") {{
+    state.profile = {{
+      orgName: "Aegis Gate Technologies SAS",
+      productName: "Aegis Enterprise VPN & PAM",
+      euState: "France (ANSSI)",
+      empCount: 140,
+      annualRevenue: 32000000,
+      nis2Sector: "ict_b2b",
+      craCategory: "class1"
+    }};
+    CRA_ITEMS.forEach((it, idx) => {{
+      state.craAnswers[it.id] = idx < 8 ? "compliant" : "progress";
+    }});
+    NIS2_ITEMS.forEach((it, idx) => {{
+      state.nis2Answers[it.id] = idx < 9 ? "compliant" : "progress";
+    }});
+  }} else if (presetKey === "micro_startup") {{
+    state.profile = {{
+      orgName: "HyperMicro UG",
+      productName: "DevOps Sync CLI",
+      euState: "Germany (BSI / NIS2UmsuCG)",
+      empCount: 8,
+      annualRevenue: 950000,
+      nis2Sector: "software_vendor",
+      craCategory: "standard"
+    }};
+    CRA_ITEMS.forEach((it, idx) => {{
+      state.craAnswers[it.id] = (idx === 0 || idx === 1) ? "compliant" : "non_compliant";
+    }});
+    NIS2_ITEMS.forEach((it, idx) => {{
+      state.nis2Answers[it.id] = (idx === 3) ? "compliant" : "non_compliant";
+    }});
+  }}
+  renderProfileInputs();
+  renderCraChecklist();
+  renderNis2Checklist();
+  recalculateAll();
+  saveStateToStorage();
+}}
+
+function resetAllData() {{
+  if (!confirm("Are you sure you want to reset all responses to default?")) return;
+  state.craAnswers = {{}};
+  state.nis2Answers = {{}};
+  renderCraChecklist();
+  renderNis2Checklist();
+  recalculateAll();
+  saveStateToStorage();
+}}
+
+/* CHECKLIST RENDERING */
+function renderCraChecklist() {{
+  const container = document.getElementById("craChecklistContainer");
+  container.innerHTML = "";
+  
+  let currentCat = "";
+  CRA_ITEMS.forEach(item => {{
+    if (item.category !== currentCat) {{
+      currentCat = item.category;
+      const catDiv = document.createElement("div");
+      catDiv.className = "group-title";
+      catDiv.textContent = currentCat;
+      container.appendChild(catDiv);
+    }}
+
+    const val = state.craAnswers[item.id] || "non_compliant";
+    const itemDiv = document.createElement("div");
+    itemDiv.className = "check-item";
+    itemDiv.innerHTML = `
+      <div class="check-header">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="check-id">${{item.id}}</span>
+          <span class="check-title-text">${{item.title}}</span>
+        </div>
+        <span class="check-article">${{item.article}}</span>
+      </div>
+      <div class="check-desc">${{item.desc}}</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">
+        <strong>Consequence:</strong> ${{item.impact}}
+      </div>
+      <div class="check-options">
+        <button class="opt-btn ${{val === 'compliant' ? 'active-compliant' : ''}}" onclick="setAnswer('cra', '${{item.id}}', 'compliant')">&#10004; Compliant (100%)</button>
+        <button class="opt-btn ${{val === 'progress' ? 'active-progress' : ''}}" onclick="setAnswer('cra', '${{item.id}}', 'progress')">&#9684; In Progress (50%)</button>
+        <button class="opt-btn ${{val === 'non_compliant' ? 'active-noncompliant' : ''}}" onclick="setAnswer('cra', '${{item.id}}', 'non_compliant')">&#10008; Non-Compliant (0%)</button>
+        <button class="opt-btn ${{val === 'na' ? 'active-na' : ''}}" onclick="setAnswer('cra', '${{item.id}}', 'na')">N/A (Exempt)</button>
+      </div>
+    `;
+    container.appendChild(itemDiv);
+  }});
+}}
+
+function renderNis2Checklist() {{
+  const container = document.getElementById("nis2ChecklistContainer");
+  container.innerHTML = "";
+  
+  let currentCat = "";
+  NIS2_ITEMS.forEach(item => {{
+    if (item.category !== currentCat) {{
+      currentCat = item.category;
+      const catDiv = document.createElement("div");
+      catDiv.className = "group-title";
+      catDiv.textContent = currentCat;
+      container.appendChild(catDiv);
+    }}
+
+    const val = state.nis2Answers[item.id] || "non_compliant";
+    const itemDiv = document.createElement("div");
+    itemDiv.className = "check-item";
+    itemDiv.innerHTML = `
+      <div class="check-header">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span class="check-id">${{item.id}}</span>
+          <span class="check-title-text">${{item.title}}</span>
+        </div>
+        <span class="check-article">${{item.article}}</span>
+      </div>
+      <div class="check-desc">${{item.desc}}</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px;">
+        <strong>Statutory Focus:</strong> ${{item.impact}}
+      </div>
+      <div class="check-options">
+        <button class="opt-btn ${{val === 'compliant' ? 'active-compliant' : ''}}" onclick="setAnswer('nis2', '${{item.id}}', 'compliant')">&#10004; Compliant (100%)</button>
+        <button class="opt-btn ${{val === 'progress' ? 'active-progress' : ''}}" onclick="setAnswer('nis2', '${{item.id}}', 'progress')">&#9684; In Progress (50%)</button>
+        <button class="opt-btn ${{val === 'non_compliant' ? 'active-noncompliant' : ''}}" onclick="setAnswer('nis2', '${{item.id}}', 'non_compliant')">&#10008; Non-Compliant (0%)</button>
+        <button class="opt-btn ${{val === 'na' ? 'active-na' : ''}}" onclick="setAnswer('nis2', '${{item.id}}', 'na')">N/A (Exempt)</button>
+      </div>
+    `;
+    container.appendChild(itemDiv);
+  }});
+}}
+
+function setAnswer(framework, id, val) {{
+  if (framework === "cra") {{
+    state.craAnswers[id] = val;
+    renderCraChecklist();
+  }} else {{
+    state.nis2Answers[id] = val;
+    renderNis2Checklist();
+  }}
+  recalculateAll();
+  saveStateToStorage();
+}}
+
+/* CALCULATION & ENGINE */
+function recalculateAll() {{
+  // 1. Regulatory Scope Engine
+  const emp = state.profile.empCount;
+  const rev = state.profile.annualRevenue;
+  const sector = state.profile.nis2Sector;
+  const craCat = state.profile.craCategory;
+
+  let isEssential = false;
+  let isImportant = false;
+  let nis2StatusText = "";
+  let nis2BasisText = "";
+  let maxFineNis2 = 0;
+
+  // NIS2 Rules
+  if (sector === "digital_infra" && (emp >= 50 || rev >= 10000000)) {{
+    isEssential = true;
+    nis2StatusText = "Essential Entity (Annex I)";
+    nis2BasisText = "Digital Infrastructure provider exceeding medium threshold.";
+    maxFineNis2 = Math.max(10000000, rev * 0.02);
+  }} else if (emp >= 250 || rev >= 50000000) {{
+    isEssential = true;
+    nis2StatusText = "Essential Entity (Annex I)";
+    nis2BasisText = "Large enterprise criteria (>=250 FTE or >=€50M turnover).";
+    maxFineNis2 = Math.max(10000000, rev * 0.02);
+  }} else if (emp >= 50 || rev >= 10000000) {{
+    isImportant = true;
+    nis2StatusText = "Important Entity (Annex II)";
+    nis2BasisText = "Medium entity criteria (50-249 FTE or €10M-€50M turnover).";
+    maxFineNis2 = Math.max(7000000, rev * 0.014);
+  }} else {{
+    nis2StatusText = "Micro/Small Entity (Supply Chain Duty)";
+    nis2BasisText = "Below direct NIS2 size thresholds; direct customers will enforce supply chain compliance.";
+    maxFineNis2 = 0;
+  }}
+
+  // CRA Rules
+  let craTrackText = "";
+  let craBasisText = "";
+  let maxFineCra = Math.max(15000000, rev * 0.025);
+
+  if (craCat === "standard") {{
+    craTrackText = "Module A (Internal Self-Assessment)";
+    craBasisText = "Standard PDE: CE mark via internal control file.";
+  }} else if (craCat === "class1") {{
+    craTrackText = "Class I (Important PDE - Module A or Third-Party)";
+    craBasisText = "Critical security software (identity, VPN, browser). Harmonized standards required.";
+  }} else if (craCat === "class2") {{
+    craTrackText = "Class II (Third-Party Notified Body Audit)";
+    craBasisText = "High-criticality product (OS, hypervisor, firewall). Mandatory external audit.";
+  }} else if (craCat === "critical") {{
+    craTrackText = "Critical Product (EU European Cybersecurity Cert)";
+    craBasisText = "Hardware security module / smart meter gateway.";
+  }} else {{
+    craTrackText = "Pure Cloud Service (Governed via NIS2)";
+    craBasisText = "If any local agent/daemon/app is distributed, CRA still attaches.";
+    maxFineCra = 0;
+  }}
+
+  document.getElementById("nis2DesignationText").textContent = nis2StatusText;
+  document.getElementById("nis2DesignationBasis").textContent = nis2BasisText;
+  document.getElementById("craDesignationText").textContent = craTrackText;
+  document.getElementById("craDesignationBasis").textContent = craBasisText;
+
+  const totalMaxFine = maxFineNis2 + maxFineCra;
+  document.getElementById("calculatedMaxFine").textContent = "€" + totalMaxFine.toLocaleString();
+
+  const scopeBadge = document.getElementById("scopeStatusBadge");
+  const verdictTitle = document.getElementById("scopeVerdictTitle");
+  const verdictDesc = document.getElementById("scopeVerdictDesc");
+
+  if (isEssential) {{
+    scopeBadge.textContent = "ESSENTIAL ENTITY (HIGH SCRUTINY)";
+    scopeBadge.style.color = "var(--rose)";
+    scopeBadge.style.borderColor = "var(--rose)";
+    verdictTitle.textContent = "Tier-1 Highest Regulatory Enforcement Scope";
+    verdictDesc.textContent = "Subject to proactive ex-ante audits, mandatory 24h CSIRT notifications, and executive board personal liability.";
+  }} else if (isImportant) {{
+    scopeBadge.textContent = "IMPORTANT ENTITY";
+    scopeBadge.style.color = "var(--eu-gold)";
+    scopeBadge.style.borderColor = "var(--eu-gold)";
+    verdictTitle.textContent = "Substantial NIS2 & CRA Scope";
+    verdictDesc.textContent = "Subject to ex-post enforcement, mandatory 24h incident reporting, and CRA technical conformity file archiving.";
+  }} else {{
+    scopeBadge.textContent = "SUPPLY CHAIN SCOPE";
+    scopeBadge.style.color = "var(--cyan)";
+    scopeBadge.style.borderColor = "var(--cyan)";
+    verdictTitle.textContent = "Indirect Supply Chain & CRA Product Scope";
+    verdictDesc.textContent = "Although below direct NIS2 size thresholds, CRA applies to all software sold in the EU, and enterprise customers will enforce NIS2 supplier audits.";
+  }}
+
+  // 2. Score Computation
+  let craTotal = 0, craMax = 0, craAnswered = 0;
+  CRA_ITEMS.forEach(it => {{
+    const a = state.craAnswers[it.id] || "non_compliant";
+    if (a !== "na") {{
+      craMax += it.weight;
+      if (a === "compliant") craTotal += it.weight;
+      else if (a === "progress") craTotal += it.weight * 0.5;
+      if (a !== "non_compliant") craAnswered++;
+    }}
+  }});
+  const craScore = craMax > 0 ? Math.round((craTotal / craMax) * 100) : 0;
+
+  let nis2Total = 0, nis2Max = 0, nis2Answered = 0;
+  NIS2_ITEMS.forEach(it => {{
+    const a = state.nis2Answers[it.id] || "non_compliant";
+    if (a !== "na") {{
+      nis2Max += it.weight;
+      if (a === "compliant") nis2Total += it.weight;
+      else if (a === "progress") nis2Total += it.weight * 0.5;
+      if (a !== "non_compliant") nis2Answered++;
+    }}
+  }});
+  const nis2Score = nis2Max > 0 ? Math.round((nis2Total / nis2Max) * 100) : 0;
+  const compositeScore = Math.round((craScore * 0.5) + (nis2Score * 0.5));
+
+  // Update Banners
+  document.getElementById("craTabBadge").textContent = `${{craAnswered}}/12`;
+  document.getElementById("nis2TabBadge").textContent = `${{nis2Answered}}/12`;
+  document.getElementById("craScoreBanner").textContent = `${{craScore}}%`;
+  document.getElementById("nis2ScoreBanner").textContent = `${{nis2Score}}%`;
+
+  // Update Tab 4 Scorecards
+  document.getElementById("resCraScoreVal").textContent = `${{craScore}}%`;
+  document.getElementById("resCraBar").style.width = `${{craScore}}%`;
+  document.getElementById("resNis2ScoreVal").textContent = `${{nis2Score}}%`;
+  document.getElementById("resNis2Bar").style.width = `${{nis2Score}}%`;
+
+  // SVG Gauge
+  const gaugePath = document.getElementById("compositeGaugePath");
+  gaugePath.setAttribute("stroke-dasharray", `${{compositeScore}}, 100`);
+  document.getElementById("compositeScoreText").textContent = `${{compositeScore}}%`;
+
+  const ratingLabel = document.getElementById("compositeScoreRating");
+  if (compositeScore >= 85) {{
+    gaugePath.setAttribute("stroke", "var(--emerald)");
+    ratingLabel.textContent = "Audit-Ready & Resilient";
+    ratingLabel.style.color = "var(--emerald)";
+  }} else if (compositeScore >= 65) {{
+    gaugePath.setAttribute("stroke", "var(--cyan)");
+    ratingLabel.textContent = "Substantial Compliance (Minor Gaps)";
+    ratingLabel.style.color = "var(--cyan)";
+  }} else if (compositeScore >= 40) {{
+    gaugePath.setAttribute("stroke", "var(--amber)");
+    ratingLabel.textContent = "Elevated Fine Risk";
+    ratingLabel.style.color = "var(--amber)";
+  }} else {{
+    gaugePath.setAttribute("stroke", "var(--rose)");
+    ratingLabel.textContent = "CRITICAL REGULATORY EXPOSURE";
+    ratingLabel.style.color = "var(--rose)";
+  }}
+
+  // Count high risk gaps
+  let gapsCount = 0;
+  CRA_ITEMS.forEach(it => {{
+    if ((state.craAnswers[it.id] || "non_compliant") === "non_compliant") gapsCount++;
+  }});
+  NIS2_ITEMS.forEach(it => {{
+    if ((state.nis2Answers[it.id] || "non_compliant") === "non_compliant") gapsCount++;
+  }});
+  document.getElementById("highRiskGapsCount").textContent = gapsCount;
+}}
+
+/* GAP ANALYSIS RENDERING */
+function renderGapAnalysis() {{
+  const container = document.getElementById("gapContainer");
+  container.innerHTML = "";
+
+  const gaps = [];
+
+  CRA_ITEMS.forEach(it => {{
+    const a = state.craAnswers[it.id] || "non_compliant";
+    if (a !== "compliant" && a !== "na") {{
+      gaps.push({{
+        framework: "CRA",
+        id: it.id,
+        article: it.article,
+        title: it.title,
+        status: a,
+        weight: it.weight,
+        impact: it.impact,
+        remediation: getRemediationAction(it.id)
+      }});
+    }}
+  }});
+
+  NIS2_ITEMS.forEach(it => {{
+    const a = state.nis2Answers[it.id] || "non_compliant";
+    if (a !== "compliant" && a !== "na") {{
+      gaps.push({{
+        framework: "NIS2",
+        id: it.id,
+        article: it.article,
+        title: it.title,
+        status: a,
+        weight: it.weight,
+        impact: it.impact,
+        remediation: getRemediationAction(it.id)
+      }});
+    }}
+  }});
+
+  // Sort by weight descending
+  gaps.sort((a, b) => b.weight - a.weight);
+
+  if (gaps.length === 0) {{
+    container.innerHTML = `
+      <div class="alert alert-info" style="color:var(--emerald); border-color:var(--emerald); background:var(--emerald-dim);">
+        <strong style="font-size:15px;">&#10004; Zero Regulatory Gaps Detected!</strong>
+        <div style="font-size:13px; margin-top:4px;">Your organization and software deliverables fulfill all key requirements of CRA Annex I and NIS2 Articles 20, 21, and 23.</div>
+      </div>
+    `;
+    return;
+  }}
+
+  gaps.forEach(gap => {{
+    const isCritical = gap.weight >= 9;
+    const itemDiv = document.createElement("div");
+    itemDiv.className = "check-item";
+    itemDiv.style.borderLeft = `4px solid ${{isCritical ? 'var(--rose)' : 'var(--amber)'}}`;
+    itemDiv.innerHTML = `
+      <div class="check-header">
+        <div>
+          <span class="check-id" style="color:${{gap.framework === 'CRA' ? 'var(--cyan)' : 'var(--eu-gold)'}};">${{gap.framework}} &bull; ${{gap.id}}</span>
+          <strong style="margin-left:8px; font-size:14px;">${{gap.title}}</strong>
+        </div>
+        <span style="font-size:11px; font-weight:700; color:${{isCritical ? 'var(--rose)' : 'var(--amber)'}};">
+          ${{isCritical ? 'CRITICAL ENFORCEMENT GAP' : 'MODERATE GAP'}}
+        </span>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); margin:6px 0;">
+        <strong>Legal Basis:</strong> ${{gap.article}} | <strong>Statutory Risk:</strong> ${{gap.impact}}
+      </div>
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; margin-top:8px;">
+        <div style="font-size:11px; font-weight:700; color:var(--cyan); text-transform:uppercase; letter-spacing:0.04em;">Recommended Remediation Step</div>
+        <div style="font-size:13px; color:var(--text-main); margin-top:2px;">${{gap.remediation}}</div>
+      </div>
+    `;
+    container.appendChild(itemDiv);
+  }});
+}}
+
+function getRemediationAction(id) {{
+  const map = {{
+    "CRA-01": "Audit product configuration files and container entrypoints. Remove default credentials, bind management interfaces to 127.0.0.1, and enforce secure defaults.",
+    "CRA-02": "Enforce TLS 1.3 across all customer and backend API endpoints. Terminate TLS 1.0/1.1 and obsolete SHA-1/MD5 cipher suites.",
+    "CRA-03": "Add stack protection flags (`-fstack-protector-strong`, `-D_FORTIFY_SOURCE=2`) and sanitize memory allocations in backend build scripts.",
+    "CRA-04": "Establish a dedicated 24/7 on-call security roster and pre-fill the 24h ENISA / CSIRT active exploitation notification form (included in Pro Pack).",
+    "CRA-05": "Deploy a RFC 9116 compliant security.txt file at `/.well-known/security.txt` and publish a public Coordinated Vulnerability Disclosure policy.",
+    "CRA-06": "Embed continuous dependency auditing (e.g. `npm audit`, `trivy`, `semgrep`) directly into the CI/CD pipeline to block deployment of vulnerable packages.",
+    "CRA-07": "Integrate automated CycloneDX or SPDX generation tools in your build steps so every release tag produces a machine-readable SBOM JSON.",
+    "CRA-08": "Establish a written Vulnerability Management SLA requiring zero-day and Critical CVE dependencies to be patched within 48 to 72 hours.",
+    "CRA-09": "Update master service agreements and end-user license agreements to include a minimum 5-year free security patch commitment for EU customers.",
+    "CRA-10": "Sign release binaries and Docker containers with Sigstore Cosign or GPG before publication to preserve cryptographic supply chain integrity.",
+    "CRA-11": "Compile an internal technical documentation file containing architecture diagrams, threat models, and SBOM history archived for 10 years.",
+    "CRA-12": "Draft the EU Declaration of Conformity and affix the CE marking to the documentation or software distribution interface.",
+    "NIS2-01": "Table a formal cybersecurity risk management resolution at the next Management Board meeting to satisfy Article 20 oversight duty.",
+    "NIS2-02": "Enroll all managing directors and C-level board members in accredited cybersecurity governance training to shield against personal liability.",
+    "NIS2-03": "Document formal Information Security Management System (ISMS) policies covering access control, change management, and risk evaluation.",
+    "NIS2-04": "Enforce phishing-resistant multi-factor authentication (FIDO2 / hardware tokens / authenticator apps) across all corporate accounts and servers.",
+    "NIS2-05": "Deploy AES-256 database volume encryption and isolate master encryption keys using a dedicated cloud KMS or Hardware Security Module.",
+    "NIS2-06": "Establish immutable air-gapped / WORM backups and conduct a live disaster recovery failover drill to verify RTO under 4 hours.",
+    "NIS2-07": "Send the 25-Point Vendor Cybersecurity Questionnaire (included in Pro Pack) to all direct SaaS, hosting, and software sub-processors.",
+    "NIS2-08": "Deploy an external attack surface monitor or periodic vulnerability scanning service across public domains and IP ranges.",
+    "NIS2-09": "Schedule quarterly anti-phishing interactive simulations and annual cyber hygiene training for all employees.",
+    "NIS2-10": "Contract an independent security firm to perform an annual penetration test and formally present findings to executive leadership.",
+    "NIS2-11": "Designate a primary CSIRT liaison and rehearse the 24-hour Article 23 early warning notification protocol using our standard template.",
+    "NIS2-12": "Draft an incident timeline protocol ensuring forensic teams can deliver the 72-hour detailed report and 1-month final RCA seamlessly."
+  }};
+  return map[id] || "Consult compliance officer and execute remediation within 30 business days.";
+}}
+
+/* SBOM & ARTIFACT TOOL */
+function renderDependencyInputs() {{
+  const container = document.getElementById("dependencyListContainer");
+  container.innerHTML = "";
+  
+  state.sbom.dependencies.forEach((dep, idx) => {{
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.gap = "8px";
+    row.style.marginBottom = "8px";
+    row.style.alignItems = "center";
+    row.innerHTML = `
+      <input type="text" class="form-control" style="flex:2;" value="${{dep.name}}" placeholder="Package Name" oninput="updateDep(${{idx}}, 'name', this.value)">
+      <input type="text" class="form-control" style="flex:1;" value="${{dep.version}}" placeholder="Version" oninput="updateDep(${{idx}}, 'version', this.value)">
+      <input type="text" class="form-control" style="flex:1;" value="${{dep.license}}" placeholder="License" oninput="updateDep(${{idx}}, 'license', this.value)">
+      <button class="btn btn-outline btn-sm" onclick="removeSbomDependency(${{idx}})" style="color:var(--rose); padding:6px 10px;">&times;</button>
+    `;
+    container.appendChild(row);
+  }});
+}}
+
+function addSbomDependency() {{
+  state.sbom.dependencies.push({{ name: "new-lib", version: "1.0.0", ecosystem: "npm", license: "Apache-2.0", hash: "sha256-abc..." }});
+  renderDependencyInputs();
+  regenerateSbom();
+}}
+
+function removeSbomDependency(idx) {{
+  state.sbom.dependencies.splice(idx, 1);
+  renderDependencyInputs();
+  regenerateSbom();
+}}
+
+function updateDep(idx, key, val) {{
+  state.sbom.dependencies[idx][key] = val;
+  regenerateSbom();
+}}
+
+function regenerateSbom() {{
+  state.sbom.pkgName = document.getElementById("sbomPkgName").value.trim() || "@acme/app";
+  state.sbom.version = document.getElementById("sbomVersion").value.trim() || "1.0.0";
+  state.sbom.securityEmail = document.getElementById("securityEmail").value.trim() || "security@company.eu";
+  state.sbom.pgpUrl = document.getElementById("securityPgp").value.trim() || "https://company.eu/pgp-key.txt";
+  state.sbom.policyUrl = document.getElementById("securityPolicyUrl").value.trim() || "https://company.eu/security-policy";
+
+  const isCyclone = document.querySelector('input[name="sbomFormat"]:checked').value === "cyclonedx";
+
+  // CycloneDX 1.6 / SPDX 2.3
+  let sbomObj = {{}};
+  if (isCyclone) {{
+    document.getElementById("sbomFormatLabel").textContent = "CycloneDX 1.6 (JSON) - Official CRA Recommended Format";
+    sbomObj = {{
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      serialNumber: "urn:uuid:8b3a5e12-" + Math.floor(Math.random()*1000000),
+      version: 1,
+      metadata: {{
+        timestamp: new Date().toISOString(),
+        tools: [{{ vendor: "EU Cyber Shield 2026", name: "CRA SBOM Generator", version: "2.4.0" }}],
+        component: {{
+          type: "application",
+          name: state.sbom.pkgName,
+          version: state.sbom.version,
+          purl: `pkg:npm/${{state.sbom.pkgName}}@${{state.sbom.version}}`,
+          supplier: {{ name: state.profile.orgName, url: [state.sbom.policyUrl] }}
+        }}
+      }},
+      components: state.sbom.dependencies.map(d => ({{
+        type: "library",
+        name: d.name,
+        version: d.version,
+        purl: `pkg:${{d.ecosystem || 'npm'}}/${{d.name}}@${{d.version}}`,
+        licenses: [{{ license: {{ id: d.license || "MIT" }} }}],
+        hashes: [{{ alg: "SHA-256", content: d.hash || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }}]
+      }}))
+    }};
+  }} else {{
+    document.getElementById("sbomFormatLabel").textContent = "SPDX 2.3 (JSON) Specification";
+    sbomObj = {{
+      spdxVersion: "SPDX-2.3",
+      dataLicense: "CC0-1.0",
+      SPDXID: "SPDXRef-DOCUMENT",
+      name: state.sbom.pkgName,
+      documentNamespace: `https://company.eu/spdxdocs/${{state.sbom.pkgName}}-${{state.sbom.version}}`,
+      creationInfo: {{
+        creators: [`Organization: ${{state.profile.orgName}}`],
+        created: new Date().toISOString()
+      }},
+      packages: [
+        {{
+          name: state.sbom.pkgName,
+          SPDXID: "SPDXRef-RootPackage",
+          versionInfo: state.sbom.version,
+          downloadLocation: "NOASSERTION",
+          filesAnalyzed: false,
+          licenseConcluded: "Proprietary"
+        }},
+        ...state.sbom.dependencies.map((d, i) => ({{
+          name: d.name,
+          SPDXID: `SPDXRef-Package-${{i+1}}`,
+          versionInfo: d.version,
+          downloadLocation: "NOASSERTION",
+          filesAnalyzed: false,
+          licenseConcluded: d.license || "MIT"
+        }}))
+      ]
+    }};
+  }}
+
+  document.getElementById("sbomJsonOutput").textContent = JSON.stringify(sbomObj, null, 2);
+
+  // RFC 9116 security.txt
+  const secTxtContent = `# RFC 9116 Coordinated Vulnerability Disclosure
+# Conforming to EU Cyber Resilience Act (CRA) Article 10(6)
+Contact: mailto:${{state.sbom.securityEmail}}
+Expires: 2027-12-31T23:59:59.000Z
+Encryption: ${{state.sbom.pgpUrl}}
+Preferred-Languages: en, de, fr
+Canonical: https://${{state.profile.orgName.toLowerCase().replace(/[^a-z0-9]/g, '')}}.eu/.well-known/security.txt
+Policy: ${{state.sbom.policyUrl}}
+Hiring: https://${{state.profile.orgName.toLowerCase().replace(/[^a-z0-9]/g, '')}}.eu/careers
+CSIRT-Coordinated-Disclosure: yes
+`;
+  document.getElementById("secTxtOutput").textContent = secTxtContent;
+
+  // Policy Doc
+  const policyDoc = `# SOFTWARE BILL OF MATERIALS (SBOM) & VULNERABILITY POLICY
+**Organization**: ${{state.profile.orgName}}
+**Effective Date**: 2026-01-01 | **Applicable Standard**: EU CRA Annex I & NIS2 Article 21
+
+### 1. Purpose & Regulatory Alignment
+This policy governs software component transparency, machine-readable inventory generation, and vulnerability disclosure pursuant to Regulation (EU) 2024/2847 (Cyber Resilience Act) and Directive (EU) 2022/2555 (NIS2).
+
+### 2. Software Bill of Materials (SBOM) Generation
+- Every production release of **${{state.sbom.pkgName}}** must automatically generate a machine-readable SBOM in **CycloneDX 1.6** or **SPDX 2.3** format.
+- The SBOM must document all direct and transitive third-party dependencies, including package purl, exact version, license identifier, and SHA-256 cryptographic hashes.
+- SBOM records shall be retained for a statutory period of **10 years** in accordance with CRA Article 23.
+
+### 3. Vulnerability Remediation SLAs
+- **Actively Exploited Zero-Days (CRA Article 11)**: Emergency patch deployed within 24 hours. Formal notification filed with competent National CSIRT and ENISA within 24 hours.
+- **Critical CVEs (CVSS 9.0 - 10.0)**: Remediated within 72 hours.
+- **High Severity (CVSS 7.0 - 8.9)**: Remediated within 14 calendar days.
+
+### 4. Coordinated Vulnerability Disclosure (CVD)
+Security researchers may submit vulnerability reports via **${{state.sbom.securityEmail}}** encrypted with our published PGP key. We commit to acknowledging receipt within 24 hours and providing status updates every 72 hours.
+`;
+  document.getElementById("policyOutput").textContent = policyDoc;
+}}
+
+function showArtifactTab(type) {{
+  document.getElementById("artifactPaneSbom").style.display = type === "sbom" ? "block" : "none";
+  document.getElementById("artifactPaneSecTxt").style.display = type === "sectxt" ? "block" : "none";
+  document.getElementById("artifactPanePolicy").style.display = type === "policy" ? "block" : "none";
+
+  document.getElementById("btnArtifactSbom").classList.toggle("active", type === "sbom");
+  document.getElementById("btnArtifactSecTxt").classList.toggle("active", type === "sectxt");
+  document.getElementById("btnArtifactPolicy").classList.toggle("active", type === "policy");
+}}
+
+function downloadArtifact(type) {{
+  if (type === "sbom") {{
+    const isCyclone = document.querySelector('input[name="sbomFormat"]:checked').value === "cyclonedx";
+    const filename = isCyclone ? "cyclonedx-bom.json" : "spdx-bom.json";
+    downloadFile(filename, document.getElementById("sbomJsonOutput").textContent, "application/json");
+  }} else if (type === "sectxt") {{
+    downloadFile("security.txt", document.getElementById("secTxtOutput").textContent, "text/plain");
+  }} else if (type === "policy") {{
+    downloadFile("SBOM-POLICY.md", document.getElementById("policyOutput").textContent, "text/markdown");
+  }}
+}}
+
+/* PRO TEMPLATES UI */
+function renderProTemplatesUI() {{
+  const container = document.getElementById("proTemplatesList");
+  container.innerHTML = "";
+
+  Object.keys(PRO_TEMPLATES).forEach(key => {{
+    const tpl = PRO_TEMPLATES[key];
+    const isSelected = key === state.activeProTemplateKey;
+    const div = document.createElement("div");
+    div.className = "template-item";
+    div.style.borderColor = isSelected ? "var(--cyan)" : "var(--border)";
+    div.style.cursor = "pointer";
+    div.onclick = () => selectProTemplate(key);
+    div.innerHTML = `
+      <div>
+        <div style="font-size:13px; font-weight:700; color:${{isSelected ? 'var(--cyan)' : 'var(--text-main)'}};">
+          ${{tpl.title}}
+        </div>
+        <div style="font-size:11px; color:var(--text-dim);">${{tpl.filename}}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); selectProTemplate('${{key}}');">View</button>
+    `;
+    container.appendChild(div);
+  }});
+
+  selectProTemplate(state.activeProTemplateKey);
+}}
+
+function selectProTemplate(key) {{
+  state.activeProTemplateKey = key;
+  const tpl = PRO_TEMPLATES[key] || Object.values(PRO_TEMPLATES)[0];
+  document.getElementById("selectedTemplateTitle").textContent = tpl.title;
+  document.getElementById("selectedTemplateSubtitle").textContent = tpl.filename;
+  document.getElementById("proTemplatePreview").textContent = tpl.content;
+
+  // Re-highlight list
+  const container = document.getElementById("proTemplatesList");
+  Array.from(container.children).forEach((child, idx) => {{
+    const k = Object.keys(PRO_TEMPLATES)[idx];
+    child.style.borderColor = k === key ? "var(--cyan)" : "var(--border)";
+  }});
+}}
+
+function downloadActiveProTemplate() {{
+  const tpl = PRO_TEMPLATES[state.activeProTemplateKey];
+  if (tpl) {{
+    downloadFile(tpl.filename, tpl.content, "text/markdown");
+  }}
+}}
+
+function downloadAllProTemplates() {{
+  // Simple combined bundle
+  let combined = "# EU NIS2 & CRA PRO INCIDENT RESPONSE BUNDLE\\n";
+  combined += `# Generated for: ${{state.profile.orgName}}\\n`;
+  combined += `# Date: ${{new Date().toISOString()}}\\n\\n`;
+  
+  Object.values(PRO_TEMPLATES).forEach(tpl => {{
+    combined += `\\n=======================================================\\n`;
+    combined += `FILE: ${{tpl.filename}}\\n`;
+    combined += `=======================================================\\n\\n`;
+    combined += tpl.content + "\\n\\n";
+  }});
+
+  downloadFile("EU-NIS2-CRA-Pro-Incident-Response-Pack.md", combined, "text/markdown");
+}}
+
+/* PRO MODAL & UNLOCK LOGIC */
+function openProModal() {{
+  document.getElementById("proModal").classList.add("active");
+}}
+
+function closeProModal() {{
+  document.getElementById("proModal").classList.remove("active");
+}}
+
+function verifyLicenseCode() {{
+  const code = document.getElementById("licenseCodeInput").value.trim().toUpperCase();
+  if (code === "EUR-RESILIENCE-2026" || code.startsWith("PRO-") || code.length >= 8) {{
+    state.isProUnlocked = true;
+    saveStateToStorage();
+    document.getElementById("proUnlockedBadge").style.display = "inline-flex";
+    alert("Success! License validated. Pro Incident Response Pack unlocked.");
+    closeProModal();
+    switchTab("pro", document.querySelectorAll(".tab-btn")[5]);
+  }} else {{
+    alert("Invalid license code. Please verify or use 'EUR-RESILIENCE-2026' for testing.");
+  }}
+}}
+
+/* EXPORT & DOWNLOAD HELPERS */
+function downloadFile(filename, content, mimeType) {{
+  const blob = new Blob([content], {{ type: mimeType }});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}}
+
+function copyBoxText(elemId) {{
+  const text = document.getElementById(elemId).textContent;
+  navigator.clipboard.writeText(text).then(() => {{
+    alert("Copied to clipboard!");
+  }}).catch(() => {{
+    alert("Failed to copy. Please copy manually.");
+  }});
+}}
+
+function exportAuditJSON() {{
+  const data = JSON.stringify(state, null, 2);
+  const orgSlug = state.profile.orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  downloadFile(`eu-cyber-audit-${{orgSlug}}.json`, data, "application/json");
+}}
+
+function triggerImportJSON() {{
+  document.getElementById("importInput").click();
+}}
+
+function importAuditJSON(event) {{
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {{
+    try {{
+      const imported = JSON.parse(e.target.result);
+      state = Object.assign(state, imported);
+      renderProfileInputs();
+      renderCraChecklist();
+      renderNis2Checklist();
+      renderDependencyInputs();
+      recalculateAll();
+      regenerateSbom();
+      saveStateToStorage();
+      alert("Audit state successfully imported!");
+    }} catch(err) {{
+      alert("Invalid JSON file: " + err.message);
+    }}
+  }};
+  reader.readAsText(file);
+}}
+
+function downloadMarkdownAuditReport() {{
+  const p = state.profile;
+  const date = new Date().toLocaleDateString("en-GB");
+  let md = `# EXECUTIVE CYBERSECURITY AUDIT REPORT
+## EU CYBER RESILIENCE ACT (CRA) & NIS2 DIRECTIVE READINESS
+**Organization**: ${{p.orgName}}  
+**Product Evaluated**: ${{p.productName}}  
+**Jurisdiction**: ${{p.euState}}  
+**Date of Audit**: ${{date}}  
+**Auditor Engine**: EU Cyber Shield 2026 (Compliance Micro-SaaS)
+
+---
+
+### 1. EXECUTIVE SUMMARY & STATUTORY EXPOSURE
+- **NIS2 Classification**: ${{document.getElementById("nis2DesignationText").textContent}}
+- **CRA Conformity Track**: ${{document.getElementById("craDesignationText").textContent}}
+- **Composite Compliance Index**: ${{document.getElementById("compositeScoreText").textContent}} (${{document.getElementById("compositeScoreRating").textContent}})
+- **CRA Readiness**: ${{document.getElementById("craScoreBanner").textContent}}
+- **NIS2 Readiness**: ${{document.getElementById("nis2ScoreBanner").textContent}}
+- **Maximum Statutory Fine Exposure**: ${{document.getElementById("calculatedMaxFine").textContent}}
+
+---
+
+### 2. CYBER RESILIENCE ACT (REGULATION (EU) 2024/2847) STATUS
+| Checkpoint | Article | Title | Status |
+|---|---|---|---|
+`;
+
+  CRA_ITEMS.forEach(it => {{
+    const a = state.craAnswers[it.id] || "non_compliant";
+    const statusLabel = a === "compliant" ? "COMPLIANT" : (a === "progress" ? "IN PROGRESS" : (a === "na" ? "N/A" : "NON-COMPLIANT"));
+    md += `| ${{it.id}} | ${{it.article}} | ${{it.title}} | **${{statusLabel}}** |\\n`;
+  }});
+
+  md += `\\n---
+
+### 3. NIS2 DIRECTIVE (DIRECTIVE (EU) 2022/2555) STATUS
+| Checkpoint | Article | Title | Status |
+|---|---|---|---|
+`;
+
+  NIS2_ITEMS.forEach(it => {{
+    const a = state.nis2Answers[it.id] || "non_compliant";
+    const statusLabel = a === "compliant" ? "COMPLIANT" : (a === "progress" ? "IN PROGRESS" : (a === "na" ? "N/A" : "NON-COMPLIANT"));
+    md += `| ${{it.id}} | ${{it.article}} | ${{it.title}} | **${{statusLabel}}** |\\n`;
+  }});
+
+  md += `\\n---
+
+### 4. PRIORITY GAP REMEDIATION ACTIONS
+`;
+
+  let gapIndex = 1;
+  CRA_ITEMS.forEach(it => {{
+    const a = state.craAnswers[it.id] || "non_compliant";
+    if (a === "non_compliant") {{
+      md += `${{gapIndex++}}. **[CRA ${{it.id}}] ${{it.title}}**: ${{getRemediationAction(it.id)}}\\n`;
+    }}
+  }});
+  NIS2_ITEMS.forEach(it => {{
+    const a = state.nis2Answers[it.id] || "non_compliant";
+    if (a === "non_compliant") {{
+      md += `${{gapIndex++}}. **[NIS2 ${{it.id}}] ${{it.title}}**: ${{getRemediationAction(it.id)}}\\n`;
+    }}
+  }});
+
+  md += `\\n---
+*Certified by EU Cyber Shield 2026 Engine. Generated for Board & Regulatory Distribution.*\\n`;
+
+  const orgSlug = p.orgName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  downloadFile(`EU-Cyber-Audit-${{orgSlug}}.md`, md, "text/markdown");
+}}
+</script>
+
+</body>
+</html>''';
+    
+    outpath = os.path.join(os.path.dirname(__file__), 'index.html')
+    with open(outpath, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    print(f"Generated index.html at {outpath} (Size: {len(html_content)} bytes)")
+
+if __name__ == '__main__':
+    generate_html()
